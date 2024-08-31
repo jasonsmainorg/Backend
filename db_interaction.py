@@ -1,27 +1,31 @@
 #  DO NOT CHANGE ANY INSERT function once it has been created and ran
 
+#Utilizing SQLAlchemy ORM for interfacing with Backend DataBase
+
 import urllib.parse
 from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-import urllib, os
-
+# Connectivity to the Azure DB
+import os
 from dotenv import load_dotenv 
 load_dotenv() 
 
-driver='{ODBC Driver 18 for SQL Server}'
 server = os.getenv('AZURE_SQL_SERVER')
 database = os.getenv('AZURE_SQL_DATABASE')
-username = os.getenv('AZURE_SQL_USER')
-password = os.getenv('AZURE_SQL_PASSWORD')
+username = urllib.parse.quote_plus(os.getenv('AZURE_SQL_USER'))
+password = urllib.parse.quote_plus(os.getenv('AZURE_SQL_PASSWORD'))
 port = os.getenv('AZURE_SQL_PORT')
 
+conn_str = f'mssql+pymssql://{username}:{password}@{server}/{database}'
 
+engine = create_engine(conn_str)
+
+# Base format for creating tables in ORM
 Base = declarative_base()
 
 class Game(Base):
-    __tablename__ = 'games'
+    __tablename__ = 'steamspy'
     
     appid = Column(Integer, primary_key=True)
     name = Column(String(255))
@@ -41,19 +45,14 @@ class Game(Base):
     discount = Column(Integer)
     ccu = Column(Integer)
 
-# Replace 'your_connection_string' with your Azure SQL Database connection string
+Base.metadata.create_all(engine)
 
-conn_str='mmsql+pyodbc::///?odbc_connect='+urllib.parse.quote_plus(
-    'Driver=%s;' % driver +
-    'Server=tcp:%s,1433;' % server +
-    'Database=%s;' % database +
-    'Uid=%s;' % username +
-    'Pwd={%s};' % password +
-    'Encrypt=yes;' +
-    'TrustServerCertificate=no;' +
-    'Connection Timeout=30;')
-engine = create_engine(conn_str)
-# Base.metadata.create_all(engine)
+Session = sessionmaker(bind=engine)
+session = Session()
 
-# Session = sessionmaker(bind=engine)
-# session = Session()
+import csv
+with open('temp.csv','r') as inFile:
+    for row in csv.reader(inFile):
+        print(row)
+
+session.close()
