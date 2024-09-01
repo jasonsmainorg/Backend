@@ -1,15 +1,12 @@
-#  DO NOT CHANGE ANY INSERT function once it has been created and ran
-
-#Utilizing SQLAlchemy ORM for interfacing with Backend DataBase
-
 import urllib.parse
-from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, Text
+from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger
 from sqlalchemy.orm import declarative_base, sessionmaker
-
-# Connectivity to the Azure DB
 import os
-from dotenv import load_dotenv 
-load_dotenv() 
+from dotenv import load_dotenv
+import csv
+
+# Load environment variables
+load_dotenv()
 
 server = os.getenv('AZURE_SQL_SERVER')
 database = os.getenv('AZURE_SQL_DATABASE')
@@ -19,11 +16,11 @@ port = os.getenv('AZURE_SQL_PORT')
 
 conn_str = f'mssql+pymssql://{username}:{password}@{server}/{database}'
 
+# Create engine and base
 engine = create_engine(conn_str)
-
-# Base format for creating tables in ORM
 Base = declarative_base()
 
+# Define the Game model
 class Game(Base):
     __tablename__ = 'steamspy'
     
@@ -45,14 +42,64 @@ class Game(Base):
     discount = Column(Integer)
     ccu = Column(Integer)
 
+    def __init__(self, appid: int, name: str, developer: str, publisher: str, 
+                 score_rank: int = None, positive: int = None, negative: int = None, 
+                 userscore: float = None, owners: str = None, average_forever: int = None, 
+                 average_2weeks: int = None, median_forever: int = None, 
+                 median_2weeks: int = None, price: float = None, initialprice: float = None, 
+                 discount: int = None, ccu: int = None):
+        self.appid = appid
+        self.name = name
+        self.developer = developer
+        self.publisher = publisher
+        self.score_rank = score_rank
+        self.positive = positive
+        self.negative = negative
+        self.userscore = userscore
+        self.owners = owners
+        self.average_forever = average_forever
+        self.average_2weeks = average_2weeks
+        self.median_forever = median_forever
+        self.median_2weeks = median_2weeks
+        self.price = price
+        self.initialprice = initialprice
+        self.discount = discount
+        self.ccu = ccu
+
 Base.metadata.create_all(engine)
 
+# Create a session
 Session = sessionmaker(bind=engine)
 session = Session()
 
-import csv
-with open('temp.csv','r') as inFile:
-    for row in csv.reader(inFile):
-        print(row)
+# Read data from CSV and insert into database
+with open('output.csv', 'r') as inFile:
+    reader = csv.reader(inFile)
+    next(reader)  # Skip header if there's one
+        # Convert data types as necessary
+    Games =[Game(
+        appid=int(row[0]),
+        name=row[1],
+        developer=row[2],
+        publisher=row[3],
+        score_rank=int(row[4]) if row[4] else None,
+        positive=int(row[5]),
+        negative=int(row[6]),
+        userscore=float(row[7]) if row[7] else None,
+        owners=row[8],
+        average_forever=int(row[9]) if row[9] else None,
+        average_2weeks=int(row[10]) if row[10] else None,
+        median_forever=int(row[11]) if row[11] else None,
+        median_2weeks=int(row[12]) if row[12] else None,
+        price=float(row[13])/100 if row[13] else None,
+        initialprice=float(row[14])/100 if row[14] else None,
+        discount=int(row[15]) if row[15] else None,
+        ccu=int(row[16]) if row[16] else None
+    ) for row in reader]
+    session.add_all(Games)
 
+# Commit the session to save the data to the database
+session.commit()
+
+# Close the session
 session.close()
