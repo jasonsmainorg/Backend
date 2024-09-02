@@ -1,5 +1,5 @@
 import urllib.parse
-from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger
+from sqlalchemy import create_engine, Column, Integer, String, Float, BigInteger, Date
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 from dotenv import load_dotenv
@@ -66,6 +66,23 @@ class Game(Base):
         self.discount = discount
         self.ccu = ccu
 
+# Define the Survey model
+class Survey(Base):
+    __tablename__ = 'SteamHWSurveys'
+    
+    date = Column(Float, primary_key=True)
+    category = Column(String(255))
+    name = Column(String(255))
+    change = Column(Float, nullable=True)
+    percentage = Column(Float, nullable=True)
+
+    def __init__(self, date: float, category: str, name: str, change: float, percentage: float):
+        self.date = date
+        self.category = category
+        self.name = name
+        self.change = change
+        self.percentage = percentage
+
 Base.metadata.create_all(engine)
 
 # Create a session
@@ -97,6 +114,17 @@ with open('output.csv', 'r') as inFile:
         ccu=int(row[16]) if row[16] else None
     ) for row in reader]
     session.add_all(Games)
+
+
+    Surveys =[Survey(
+        date=float(row[0]),
+        category=row[1],
+        name=row[2],
+        change=float(row[3]),
+        percentage=float(row[4]) if row[4] else None,
+    ) for row in reader]
+    session.add_all(Surveys)
+
 
 # Commit the session to save the data to the database
 session.commit()
